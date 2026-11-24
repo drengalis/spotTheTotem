@@ -4,7 +4,11 @@ local DEFAULTS = {
     enabled      = true,
     enemySize    = 40,
     friendlySize = 40,
-    offsetY      = 0,      -- vertical offset of the icon, in pixels
+    -- Icon offsets from its normal spot, in pixels (x: right +, y: up +)
+    enemyOffsetX    = 0,
+    enemyOffsetY    = 0,
+    friendlyOffsetX = 0,
+    friendlyOffsetY = 0,
     showTimer    = true,   -- countdown timer on the icon
     hideBar      = true,
     showEnemy    = true,
@@ -247,12 +251,14 @@ local function UpdateUnit(unit)
     local db = ns.db
     local f = GetOverlay(plate)
     local size = friendly and db.friendlySize or db.enemySize
+    local ox = friendly and db.friendlyOffsetX or db.enemyOffsetX
+    local oy = friendly and db.friendlyOffsetY or db.enemyOffsetY
     f:SetSize(size, size)
     f:ClearAllPoints()
     if db.hideBar then
-        f:SetPoint("CENTER", plate, "CENTER", 0, db.offsetY)
+        f:SetPoint("CENTER", plate, "CENTER", ox, oy)
     else
-        f:SetPoint("BOTTOM", plate, "TOP", 0, 2 + db.offsetY)
+        f:SetPoint("BOTTOM", plate, "TOP", ox, 2 + oy)
     end
     f.icon:SetTexture(icon)
     local c = friendly and FRIENDLY_COLOR or ENEMY_COLOR
@@ -303,6 +309,12 @@ events:SetScript("OnEvent", function(_, event, arg1)
         if arg1 ~= ADDON then return end
         SpotTheTotemDB = SpotTheTotemDB or {}
         local db = SpotTheTotemDB
+        -- Older versions had one shared vertical offset.
+        if db.offsetY then
+            db.enemyOffsetY = db.enemyOffsetY or db.offsetY
+            db.friendlyOffsetY = db.friendlyOffsetY or db.offsetY
+            db.offsetY = nil
+        end
         -- Older versions had one shared icon size.
         if db.iconSize then
             db.enemySize = db.enemySize or db.iconSize
@@ -428,15 +440,24 @@ SlashCmdList.SPOTTHETOTEM = function(msg)
         if which ~= "friendly" then db.enemySize = n end
         if which ~= "enemy" then db.friendlySize = n end
         ns.Print(("icon size: enemy %d, friendly %d"):format(db.enemySize, db.friendlySize))
-    elseif cmd == "offset" then
-        local n = tonumber(arg)
-        if n and n >= -50 and n <= 100 then
-            db.offsetY = math.floor(n)
-            ns.Print("vertical offset " .. db.offsetY)
-        else
-            ns.Print("usage: /stt offset <-50 to 100>")
+    elseif cmd == "offset" or cmd == "voffset" or cmd == "hoffset" then
+        -- /stt voffset [enemy|friendly] <n>   (offset = voffset)
+        -- /stt hoffset [enemy|friendly] <n>
+        local horizontal = cmd == "hoffset"
+        local minV, maxV = -100, 100
+        if not horizontal then minV, maxV = -50, 100 end
+        local which, num = arg:match("^(%a*)%s*(%-?%d*)$")
+        local n = tonumber(num)
+        if not n or n < minV or n > maxV or (which ~= "" and which ~= "enemy" and which ~= "friendly") then
+            ns.Print(("usage: /stt %s [enemy|friendly] <%d to %d>"):format(horizontal and "hoffset" or "voffset", minV, maxV))
             return
         end
+        n = math.floor(n)
+        local axis = horizontal and "X" or "Y"
+        if which ~= "friendly" then db["enemyOffset" .. axis] = n end
+        if which ~= "enemy" then db["friendlyOffset" .. axis] = n end
+        ns.Print(("%s offset: enemy %d, friendly %d"):format(horizontal and "horizontal" or "vertical",
+            db["enemyOffset" .. axis], db["friendlyOffset" .. axis]))
     elseif cmd == "durations" then
         ns.CheckDurations()
         return
@@ -451,7 +472,7 @@ SlashCmdList.SPOTTHETOTEM = function(msg)
         if ns.UpdateMinimap then ns.UpdateMinimap() end
     else
         ns.Print("/stt  - open settings")
-        ns.Print("/stt toggle | friendly | enemy | timer | size [enemy|friendly] <16-128> | offset <-50 to 100> | durations | minimap | reset")
+        ns.Print("/stt toggle | friendly | enemy | timer | size [enemy|friendly] <16-128> | hoffset/voffset [enemy|friendly] <n> | durations | minimap | reset")
         return
     end
     ns.RefreshAll()

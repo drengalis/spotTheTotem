@@ -282,15 +282,11 @@ local function BuildFrame()
         function(v) ns.db.showTimer = v end)
     timer:SetPoint("TOPLEFT", HALF + 250, -62)
 
-    local offset = CreateSlider(f, "Vertical offset", "offsetY", -50, 100,
-        "Move the icon up (positive) or down (negative) from its normal spot.")
-    offset:SetPoint("TOPLEFT", 26, -118)
-
-    Divider(-156)
+    Divider(-112) -- 24 px below the General row (bottom at -88)
 
     -- Enemy (left) | Friendly (right) ------------------------------------
-    local SECTION_TOP = 166
-    local LIST_TOP = 362
+    local SECTION_TOP = 136 -- 24 px below the separator
+    local LIST_TOP = 340
 
     local function Section(side, x)
         local isFriendly = side == "friendly"
@@ -329,6 +325,15 @@ local function BuildFrame()
             "How big " .. side .. " totem icons are, in pixels.")
         size:SetPoint("TOPLEFT", x + 6, -(SECTION_TOP + 72))
 
+        local prefix = isFriendly and "friendly" or "enemy"
+        local hoffset = CreateSlider(f, "Horizontal offset", prefix .. "OffsetX", -100, 100,
+            "Move " .. side .. " totem icons right (positive) or left (negative) from their normal spot.")
+        hoffset:SetPoint("TOPLEFT", x + 6, -(SECTION_TOP + 128))
+
+        local voffset = CreateSlider(f, "Vertical offset", prefix .. "OffsetY", -50, 100,
+            "Move " .. side .. " totem icons up (positive) or down (negative) from their normal spot.")
+        voffset:SetPoint("TOPLEFT", x + 236, -(SECTION_TOP + 128))
+
         local filter = CreateCheckbox(f, "Only spot selected totems",
             "When on, only the " .. side .. " totems checked below get an icon. " ..
             "When off, every " .. side .. " totem does.",
@@ -364,17 +369,17 @@ local function BuildFrame()
     vline:SetSize(1, listBottom - SECTION_TOP + 2)
 
     -- Footer: separator and nameplate reminder.
-    Divider(-(listBottom + 4))
+    Divider(-(listBottom + 24))
 
     local note = f:CreateFontString(nil, "ARTWORK", "GameFontHighlightSmall")
-    note:SetPoint("TOPLEFT", 26, -(listBottom + 14))
+    note:SetPoint("TOPLEFT", 26, -(listBottom + 48))
     note:SetWidth(FRAME_WIDTH - 52)
     note:SetJustifyH("LEFT")
     note:SetText("Minion nameplates must be turned on for totem icons to display. " ..
         "Use the |cffffd100minion nameplates|r checkboxes above, or the game's nameplate options.")
 
     -- Fit the window to the lists and footer.
-    f:SetHeight(listBottom + 14 + note:GetStringHeight() + 22)
+    f:SetHeight(listBottom + 48 + note:GetStringHeight() + 22)
 
     return f
 end

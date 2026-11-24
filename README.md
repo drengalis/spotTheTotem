@@ -11,9 +11,9 @@ A World of Warcraft: Forever addon that puts each totem's spell icon on its name
   - Turn spotting on or off
   - Turn the game's minion nameplates on or off (totems need these)
   - Icon size (16–128 px)
+  - Horizontal and vertical offset for the icon
   - "Only spot selected totems", with a checkbox list of every totem grouped by element
 - Option to hide the totem's health bar so only the icon shows
-- Vertical offset for the icon
 - Minimap button: left-click for settings, right-click to turn the addon on or off, drag to move
 
 Only totems that exist in WoW Forever are listed. Fire Nova Totem (now the Fire Nova spell), Tranquil Air Totem and Burning Crusade totems are not included.
@@ -41,7 +41,8 @@ World of Warcraft\_forever_\Interface\AddOns\SpotTheTotem
 | `/stt enemy` / `/stt friendly` | Turn enemy or friendly totem icons on or off |
 | `/stt timer` | Turn the countdown timer on or off |
 | `/stt size [enemy\|friendly] <16-128>` | Set icon size (both sides if none given) |
-| `/stt offset <-50 to 100>` | Set the vertical offset |
+| `/stt hoffset [enemy\|friendly] <-100 to 100>` | Set the horizontal offset (both sides if none given) |
+| `/stt voffset [enemy\|friendly] <-50 to 100>` | Set the vertical offset (both sides if none given) |
 | `/stt durations` | Compare the addon's totem durations with the game's tooltips |
 | `/stt minimap` | Show or hide the minimap button |
 | `/stt reset` | Reset all settings |
