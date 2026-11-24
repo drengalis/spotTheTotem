@@ -1,0 +1,11 @@
+## Interface: 16001
+## Title: Spot the Totem
+## Notes: Shows the totem's spell icon on its nameplate so totems are easy to spot.
+## Author: Jason Parsons
+## Version: 1.0.0
+## SavedVariables: SpotTheTotemDB
+
+Totems.lua
+Core.lua
+Options.lua
+Minimap.lua
