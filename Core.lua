@@ -80,17 +80,40 @@ local function ParseName(name)
     return name, 1
 end
 
--- Returns icon, baseName, rank, isKnown  (nil if the unit isn't a totem)
+---------------------------------------------------------------------------
+-- Secret values
+-- WoW Forever hides some unit info from addons while a restriction is active
+-- (boss encounter, combat in some content, certain maps). Names, GUIDs and
+-- creature types of non-player units then come back as "secret values", which
+-- addons can't compare, pattern-match or use as table keys without an error.
+-- We check before touching them and simply skip the unit; ns.RefreshAll runs
+-- again when the restriction lifts (ADDON_RESTRICTION_STATE_CHANGED).
+---------------------------------------------------------------------------
+
+local function IsSecret(value)
+    return issecretvalue ~= nil and issecretvalue(value)
+end
+
+local function IsIdentitySecret(unit)
+    if C_Secrets and C_Secrets.ShouldUnitIdentityBeSecret and C_Secrets.ShouldUnitIdentityBeSecret(unit) then
+        return true
+    end
+    return false
+end
+
+-- Returns icon, baseName, rank, isKnown  (nil if the unit isn't a totem or can't be identified)
 local function GetTotemInfoForUnit(unit)
+    if IsIdentitySecret(unit) then return nil end
     local name = UnitName(unit)
-    if not name then return nil end
+    if IsSecret(name) or not name then return nil end
     local base, rank = ParseName(name)
     local spellID = ns.TOTEM_SPELLS[base]
 
     if spellID then
         return ns.GetSpellIcon(spellID), base, rank, true
     end
-    if UnitCreatureType(unit) == "Totem" then
+    local creatureType = UnitCreatureType(unit)
+    if not IsSecret(creatureType) and creatureType == "Totem" then
         return ns.FALLBACK_ICON, base, rank, false
     end
     return nil
@@ -120,10 +143,17 @@ end
 
 local function GetDuration(base, rank, unitName)
     -- Your own totems: the game tells us the exact duration (includes talents).
-    for slot = 1, 4 do
-        local have, name, _, duration = GetTotemInfo(slot)
-        if have and name == unitName and duration and duration > 0 then
-            return duration
+    if unitName and not IsSecret(unitName) then
+        for slot = 1, 4 do
+            local secretSlot = C_Secrets and C_Secrets.ShouldTotemSlotBeSecret
+                and C_Secrets.ShouldTotemSlotBeSecret(slot)
+            if not secretSlot then
+                local have, name, _, duration = GetTotemInfo(slot)
+                if not (IsSecret(have) or IsSecret(name) or IsSecret(duration))
+                    and have and name == unitName and duration and duration > 0 then
+                    return duration
+                end
+            end
         end
     end
     if base == "Searing Totem" then
@@ -138,7 +168,7 @@ local function GetExpiration(unit, base, rank)
     if not duration then return nil end
 
     local guid = UnitGUID(unit)
-    if not guid then return nil end
+    if IsSecret(guid) or not guid then return nil end
 
     local elapsed = GetSecondsSinceSpawn(guid)
     if elapsed then
@@ -303,6 +333,21 @@ events:RegisterEvent("ADDON_LOADED")
 events:RegisterEvent("NAME_PLATE_UNIT_ADDED")
 events:RegisterEvent("NAME_PLATE_UNIT_REMOVED")
 events:RegisterEvent("PLAYER_ENTERING_WORLD")
+if C_RestrictedActions then
+    -- Fires when an addon restriction (encounter, combat, ...) starts or ends.
+    events:RegisterEvent("ADDON_RESTRICTION_STATE_CHANGED")
+end
+
+-- Run fn safely: an unexpected error is reported once per session instead of
+-- flooding the error window on every nameplate.
+local errorReported = false
+local function Safe(fn, ...)
+    local ok, err = pcall(fn, ...)
+    if not ok and not errorReported then
+        errorReported = true
+        ns.Print("|cffff4444error (further errors this session are hidden):|r " .. tostring(err))
+    end
+end
 
 events:SetScript("OnEvent", function(_, event, arg1)
     if event == "ADDON_LOADED" then
@@ -345,13 +390,17 @@ events:SetScript("OnEvent", function(_, event, arg1)
     elseif not ns.db then
         return
     elseif event == "NAME_PLATE_UNIT_ADDED" then
-        UpdateUnit(arg1)
+        Safe(UpdateUnit, arg1)
     elseif event == "NAME_PLATE_UNIT_REMOVED" then
         local plate = C_NamePlate.GetNamePlateForUnit(arg1)
         if plate then ClearPlate(plate) end
     elseif event == "PLAYER_ENTERING_WORLD" then
         wipe(firstSeen)
-        ns.RefreshAll()
+        Safe(ns.RefreshAll)
+    elseif event == "ADDON_RESTRICTION_STATE_CHANGED" then
+        -- Re-check every plate once the change has gone through, so totems
+        -- that appeared while their info was secret get their icons.
+        C_Timer.After(0.5, function() Safe(ns.RefreshAll) end)
     end
 end)
 

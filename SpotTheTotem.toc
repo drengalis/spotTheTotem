@@ -2,7 +2,7 @@
 ## Title: Spot the Totem
 ## Notes: Shows the totem's spell icon on its nameplate so totems are easy to spot.
 ## Author: Jason Parsons
-## Version: 1.0.0
+## Version: 1.0.1
 ## SavedVariables: SpotTheTotemDB
 
 Totems.lua
