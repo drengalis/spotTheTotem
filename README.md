@@ -46,3 +46,7 @@ World of Warcraft\_forever_\Interface\AddOns\SpotTheTotem
 | `/stt durations` | Compare the addon's totem durations with the game's tooltips |
 | `/stt minimap` | Show or hide the minimap button |
 | `/stt reset` | Reset all settings |
+
+## Releasing
+
+Releases are published automatically. Bump `## Version:` in `SpotTheTotem.toc`, add `release-notes/vX.Y.Z.md`, and push to `main`. The Release workflow then creates the `vX.Y.Z` tag, builds `SpotTheTotem-vX.Y.Z.zip`, and publishes the release.
